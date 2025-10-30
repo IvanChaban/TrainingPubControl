@@ -1,7 +1,8 @@
+// main.js
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
-import { getEl, refreshContextBadges, resetForm, print } from './ui.js';
+import { getEl, refreshContextBadges, resetForm, print, clearLogs } from './ui.js';
 import { ensureAnonSession, getAuthUid, linkCurrentUser } from './auth.js';
-import { loadPubs, loadUsersForSelectedPub } from './data.js';
+import { loadPubs, loadUsersForSelectedPub, loadDevicesForContext } from './data.js';
 import { onGet, onSet, onRemove, onClear, onKeys, onMigrateFrom, onMigrateTo } from './actions.js';
 import { subscribeResults } from './realtime.js';
 
@@ -14,24 +15,44 @@ window.addEventListener('DOMContentLoaded', async () => {
   getEl('btn-keys').addEventListener('click', onKeys);
   getEl('btn-mig-from').addEventListener('click', onMigrateFrom);
   getEl('btn-mig-to').addEventListener('click', onMigrateTo);
-
   getEl('btn-reset').addEventListener('click', resetForm);
-  getEl('pubSelect').addEventListener('change', async ()=>{ await loadUsersForSelectedPub(); });
-  getEl('userSelect').addEventListener('change', refreshContextBadges);
+  getEl('btn-clear-logs').addEventListener('click', clearLogs);
+
+  // Dropdowns
+  getEl('pubSelect').addEventListener('change', async () => {
+    await loadUsersForSelectedPub();                    // наповнили userSelect
+    refreshContextBadges();                             // ✅ оновили бейджі
+
+    const pub  = getEl('pubSelect').value;
+    const user = getEl('userSelect').value;
+    if (pub && user) {
+      await loadDevicesForContext(pub, user);           // наповнили deviceSelect
+    }
+  });
+
+  getEl('userSelect').addEventListener('change', async () => {
+    refreshContextBadges();                             // ✅ оновили бейджі
+    const pub  = getEl('pubSelect').value;
+    const user = getEl('userSelect').value;
+    if (pub && user) {
+      await loadDevicesForContext(pub, user);           // оновили devices під нового user
+    }
+  });
 
   // Initial UI
   refreshContextBadges();
   print('Initializing...');
 
   // Config guard
-  if(!SUPABASE_URL || !SUPABASE_ANON_KEY){
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     print({ ok:false, error:'Please configure SUPABASE_URL and SUPABASE_ANON_KEY.' });
     return;
   }
 
   // Anonymous sign-in
   const session = await ensureAnonSession();
-  if(!session){ return; }
+  if (!session) return;
+
   const uid = await getAuthUid();
   getEl('authUidLbl').textContent = uid || '—';
 
@@ -39,13 +60,23 @@ window.addEventListener('DOMContentLoaded', async () => {
   getEl('btn-link').addEventListener('click', async () => {
     const appUserId = getEl('linkUserInput').value.trim();
     if (!appUserId) return print({ ok:false, error:'Enter app_user_id first' });
+
     const res = await linkCurrentUser(appUserId);
     print({ step:'linkUser', ...res });
+
     if (res.ok) {
-      await loadPubs();          // RLS тепер пропустить
-      subscribeResults();        // слухаємо відповіді
+      const hasPubs = await loadPubs();                 // наповнили pubSelect (+ userSelect)
+      refreshContextBadges();                           // ✅ оновили бейджі після першого завантаження
+
+      if (hasPubs) {
+        const pub  = getEl('pubSelect').value;
+        const user = getEl('userSelect').value;
+        if (pub && user) {
+          await loadDevicesForContext(pub, user);       // первинний список devices
+        }
+      }
+
+      subscribeResults();                                // слухаємо відповіді в results
     }
   });
-
-  // За бажанням: тут можна зчитати останній app_user_id із localStorage і авто-лінкувати
 });

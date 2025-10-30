@@ -30,6 +30,11 @@
       <div class="sub">Auth UID: <span id="authUidLbl">—</span></div>
     </div>
 
+    <div class="card">
+      <label for="deviceSelect">Target device</label>
+      <select id="deviceSelect" aria-label="Select device"></select>
+    </div>
+
     <!-- Context selectors -->
     <div class="row">
       <div class="card">
@@ -66,7 +71,7 @@
         <button class="btn" id="btn-set">setItem(key, value)</button>
         <button class="btn" id="btn-remove">removeItem(key)</button>
         <button class="btn danger" id="btn-clear" title="Clears data for selected WebAppName">clear()</button>
-        <button class="btn" id="btn-keys">keys()</button>
+        <button class="btn" id="btn-keys">Key Values</button>
         <button class="btn" id="btn-mig-from">migrateFromLocalStorage()</button>
         <button class="btn" id="btn-mig-to">migrateToLocalStorage()</button>
       </div>
@@ -74,8 +79,13 @@
 
     <!-- Output -->
     <div class="card" style="margin-top:12px;">
-      <label for="result" class="muted">Result / Logs</label>
-      <div id="result" class="result" aria-live="polite">Ready. Link your app_user_id, then load pubs.</div>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <label for="result" class="muted">Result / Logs</label>
+        <button class="btn secondary" id="btn-clear-logs" title="Clear the logs area">🧹 Clear Logs</button>
+      </div>
+      <div id="result" class="result" aria-live="polite">
+        Ready. Link your app_user_id, then load pubs.
+      </div>
     </div>
 
     <footer>
