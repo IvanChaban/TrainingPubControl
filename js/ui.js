@@ -2,7 +2,7 @@
 export const getEl = (id) => document.getElementById(id);
 
 export function print(obj) {
-  const container = document.getElementById('result');  // відповідає верстці
+  const container = document.getElementById('result');
   if (!container) return console.log(obj);
 
   const pre = document.createElement('pre');
@@ -14,7 +14,7 @@ export function print(obj) {
   pre.style.borderRadius = '8px';
   pre.style.marginBottom = '8px';
 
-  // 🟢 Якщо це результат keyValues
+  // 🟢 1) keyValues snapshot
   if (obj?.result?.result?.data?.entries) {
     const entries = obj.result.result.data.entries;
     const lines = Object.entries(entries)
@@ -22,12 +22,23 @@ export function print(obj) {
       .join('\n');
     pre.textContent = lines;
   }
-  // 🟢 Якщо це звичайний keys (старий варіант)
+  // 🟢 2) старий keys
   else if (obj?.result?.result?.data?.keys) {
     const keys = obj.result.result.data.keys;
     pre.textContent = keys.join('\n');
   }
-  // 🟡 Інакше просто відображаємо JSON у стандартному вигляді
+  // 🟢 3) removeItem — короткий, читабельний рядок
+  else if (obj?.result?.result?.data && obj?.command?.type === 'removeItem') {
+    const d = obj.result.result.data;
+    const text = `removeItem → key: ${d.key ?? '—'}, deleted: ${d.deleted ?? 0}, ok: ${d.ok ?? false}`;
+    pre.textContent = text;
+  }
+  else if (obj?.result?.result?.data && obj?.command?.type === 'setItem') {
+    const d = obj.result.result.data;
+    const text = `setItem → key: ${d.key ?? '—'}\nvalue: ${d.value ?? '—'}\ncreated: ${d.created ?? false}\nprevious: ${d.previous ?? '—'}`;
+    pre.textContent = text;
+  }
+  // 🟡 4) дефолт — показати JSON як є
   else {
     pre.textContent = JSON.stringify(obj, null, 2);
   }
@@ -57,5 +68,5 @@ export const resetForm = () => {
 export function clearLogs() {
   const container = document.getElementById('result');
   if (container) container.innerHTML = '';
-  console.clear(); // необов'язково, якщо хочеш очистити ще й консоль
+  console.clear(); // опціонально, очищає консоль браузера
 }
