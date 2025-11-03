@@ -1,7 +1,7 @@
 // realtime.js
 import { sb } from './supabaseClient.js';
 import { TABLES } from './config.js';
-import { print } from './ui.js';
+import { logResult } from './ui.js';
 
 export function subscribeResults() {
   const channel = sb
@@ -20,11 +20,11 @@ export function subscribeResults() {
         if (new Date(row.created_at) < new Date(cmd.created_at)) return;
 
         // Ок — логуй
-        print({ realtime: true, result: row });
+        logResult({ realtime: true, result: row });
       }
     )
     .subscribe((status) => {
-      // за бажанням: print({ realtimeStatus: status });
+      // за бажанням: logResult({ realtimeStatus: status });
     });
 
   return channel;

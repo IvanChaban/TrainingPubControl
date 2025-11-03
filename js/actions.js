@@ -1,6 +1,7 @@
+// actions.js
 import { sb } from './supabaseClient.js';
 import { TABLES } from './config.js';
-import { getSelectedContext, print, getEl } from './ui.js';
+import { getSelectedContext, logResult, getEl, clearLogs } from './ui.js';
 
 export async function enqueue(type, payload){
   const { webAppName, userId, deviceId } = getSelectedContext();
@@ -10,7 +11,7 @@ export async function enqueue(type, payload){
 
   const { data, error } = await sb.rpc('enqueue_command', {
     p_user_id: userId,
-    p_device_id: deviceId,          // 👈 тепер цільовий iOS device_id
+    p_device_id: deviceId,
     p_web_app_name: webAppName,
     p_type: type,
     p_payload: (payload || {})
@@ -24,7 +25,7 @@ export async function fetchResultOnce(command){
     .from(TABLES.RESULTS)
     .select('*')
     .eq('command_id', command.id)
-    .gte('created_at', command.created_at)   // ⬅️ відсікаємо старі результати
+    .gte('created_at', command.created_at)
     .order('created_at', { ascending:false })
     .limit(1)
     .maybeSingle();
@@ -34,76 +35,106 @@ export async function fetchResultOnce(command){
   return { ok:true, pending:false, result:data };
 }
 
-// Button handlers (thin)
+// ---------- Button handlers (uniform style) ----------
+
 export async function onGet(){
+  clearLogs();
 
-  getEl('result').textContent = '';
-
-  const key = getEl('keyInput').value.trim(); 
-  if(!key) return print({ok:false,error:'key is required for getItem'});
+  const key = getEl('keyInput').value.trim();
+  if(!key) { logResult({ ok:false, error:'key is required for getItem' }); return; }
 
   const ins = await enqueue('getItem', { key });
-  print(ins);
-
-  if (ins.ok){
-    // ⬇️  зберігаємо останню команду для realtime-фільтра
+  if (ins.ok) {
     window.__LAST_CMD__ = ins.command;
-
-    // ⬇️  передаємо весь command (а не тільки id)
     const r = await fetchResultOnce(ins.command);
-    print({ command: ins.command, result: r });
+    logResult({ command: ins.command, result: r });
+  } else {
+    logResult(ins);
   }
 }
 
 export async function onSet(){
+  clearLogs();
 
-  getEl('result').textContent = '';
+  const key = getEl('keyInput').value.trim();
+  const val = getEl('valueInput').value.trim();
+  if(!key) { logResult({ ok:false, error:'key is required for setItem' }); return; }
+  if(!val) { logResult({ ok:false, error:'value is required for setItem' }); return; }
 
-  const key = getEl('keyInput').value.trim(); const val = getEl('valueInput').value.trim();
-  if(!key) return print({ok:false,error:'key is required for setItem'});
-  if(!val) return print({ok:false,error:'value is required for setItem'});
-  const ins = await enqueue('setItem', { key, value: val }); print(ins);
-}
-
-export async function onRemove(){
-
-  getEl('result').textContent = '';
-
-  const key = getEl('keyInput').value.trim(); if(!key) return print({ok:false,error:'key is required for removeItem'});
-  const ins = await enqueue('removeItem', { key }); print(ins);
-}
-
-export async function onClear(){ 
-
-  getEl('result').textContent = '';
-
-  const ins = await enqueue('clear', {}); print(ins); 
-}
-
-export async function onKeys(){
-
-  getEl('result').textContent = '';
-
-  const ins = await enqueue('keyValues', {});
-  print(ins);
-
-  if (ins.ok){
+  const ins = await enqueue('setItem', { key, value: val });
+  if (ins.ok) {
     window.__LAST_CMD__ = ins.command;
     const r = await fetchResultOnce(ins.command);
-    print({ command: ins.command, result: r });
+    logResult({ command: ins.command, result: r });
+  } else {
+    logResult(ins);
   }
 }
 
-export async function onMigrateFrom(){ 
+export async function onRemove(){
+  clearLogs();
 
-  getEl('result').textContent = '';
+  const key = getEl('keyInput').value.trim();
+  if(!key) { logResult({ ok:false, error:'key is required for removeItem' }); return; }
 
-  const ins = await enqueue('migrateFromLocalStorage', {}); print(ins); 
+  const ins = await enqueue('removeItem', { key });
+  if (ins.ok) {
+    window.__LAST_CMD__ = ins.command;
+    const r = await fetchResultOnce(ins.command);
+    logResult({ command: ins.command, result: r });
+  } else {
+    logResult(ins);
+  }
 }
-export async function onMigrateTo(){ 
 
-  getEl('result').textContent = '';
+export async function onClear(){
+  clearLogs();
 
-  const ins = await enqueue('migrateToLocalStorage', {}); print(ins); 
+  const ins = await enqueue('clear', {});
+  if (ins.ok) {
+    window.__LAST_CMD__ = ins.command;
+    const r = await fetchResultOnce(ins.command);
+    logResult({ command: ins.command, result: r });
+  } else {
+    logResult(ins);
+  }
 }
 
+export async function onKeys(){
+  clearLogs();
+
+  const ins = await enqueue('keyValues', {});
+  if (ins.ok) {
+    window.__LAST_CMD__ = ins.command;
+    const r = await fetchResultOnce(ins.command);
+    logResult({ command: ins.command, result: r });
+  } else {
+    logResult(ins);
+  }
+}
+
+export async function onMigrateFrom(){
+  clearLogs();
+
+  const ins = await enqueue('migrateFromLocalStorage', {});
+  if (ins.ok) {
+    window.__LAST_CMD__ = ins.command;
+    const r = await fetchResultOnce(ins.command);
+    logResult({ command: ins.command, result: r });
+  } else {
+    logResult(ins);
+  }
+}
+
+export async function onMigrateTo(){
+  clearLogs();
+
+  const ins = await enqueue('migrateToLocalStorage', {});
+  if (ins.ok) {
+    window.__LAST_CMD__ = ins.command;
+    const r = await fetchResultOnce(ins.command);
+    logResult({ command: ins.command, result: r });
+  } else {
+    logResult(ins);
+  }
+}

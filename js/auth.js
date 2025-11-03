@@ -1,11 +1,11 @@
 import { sb } from './supabaseClient.js';
-import { print } from './ui.js';
+import { logResult } from './ui.js';
 
 export async function ensureAnonSession() {
   const { data: sess } = await sb.auth.getSession();
   if (!sess?.session) {
     const { data, error } = await sb.auth.signInAnonymously();
-    if (error) { print({ ok:false, step:'signInAnonymously', error: error.message }); return null; }
+    if (error) { logResult({ ok:false, step:'signInAnonymously', error: error.message }); return null; }
     return data.session;
   }
   return sess.session;

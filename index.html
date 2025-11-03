@@ -3,77 +3,99 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Training Pub Remote Control · Minimal UI</title>
+  <title>Training Pub Remote Control</title>
   <link rel="stylesheet" href="./css/style.css" />
 </head>
 <body>
   <div class="app" role="application" aria-label="Training Pub Remote Control">
     <header>
       <div>
-        <h1>Training Pub Remote Control · Minimal UI</h1>
-        <div class="sub">Select Pub and UserID, then run a command. Output appears below.</div>
+        <h1>Training Pub Remote Control</h1>
+        <div class="sub">
+          <ol style="margin:0; padding-left:18px;">
+            <li>Link this browser to an application userID.</li>
+            <li>Select a Pub and a target device.</li>
+            <li>Run a command. Result appears below.</li>
+            <li><strong>Important:</strong> Launch the app on your device and keep it active during the operation.</li>
+          </ol>
+        </div>
       </div>
-      <button class="btn primary" id="btn-reset" title="Reset form values">Reset</button>
     </header>
 
-    <!-- Link current web user to app_user_id -->
+    <!-- Link current web user to application userID -->
     <div class="card" style="margin-bottom:12px;">
-      <label class="muted">Link Web user to <code>app_user_id</code> (one-time per browser)</label>
+      <label class="muted">Link this browser to your <strong>userID</strong></label>
+      <div class="sub" style="margin:6px 0 10px;">
+        This step identifies you to the backend so we can load your Pubs and devices.
+        You typically do this once per browser.
+      </div>
       <div class="row">
         <div>
-          <input type="text" id="linkUserInput" placeholder="Enter app_user_id (e.g. user001)" />
+          <input type="text" id="linkUserInput" placeholder="Enter userID (e.g. user001)" />
         </div>
         <div>
-          <button class="btn primary" id="btn-link">Link UserID</button>
+          <button class="btn primary" id="btn-link" title="Associate this browser with the userID">Link UserID</button>
         </div>
       </div>
-      <div class="sub">Auth UID: <span id="authUidLbl">—</span></div>
+
+      <!-- backend connection status -->
+      <div class="sub" style="margin-top:8px;">
+        Backend status:
+        <span id="backendStatus" class="badge muted" aria-live="polite">Not connected</span>
+      </div>
     </div>
 
-    <div class="card">
-      <label for="deviceSelect">Target device</label>
-      <select id="deviceSelect" aria-label="Select device"></select>
-    </div>
-
-    <!-- Context selectors -->
-    <div class="row">
+    <!-- Device + Pub -->
+    <div class="row" style="margin-bottom:12px;">
+      <div class="card">
+        <label for="deviceSelect">Target device</label>
+        <select id="deviceSelect" aria-label="Select device"></select>
+      </div>
       <div class="card">
         <label for="pubSelect">Pub (WebAppName)</label>
         <select id="pubSelect" aria-label="Select Pub"></select>
       </div>
-      <div class="card">
-        <label for="userSelect">UserID</label>
-        <select id="userSelect" aria-label="Select UserID"></select>
-      </div>
     </div>
 
     <!-- Key / Value inputs -->
-    <div class="row-3" style="margin-top:12px;">
+    <div class="row" style="margin-top:12px;">
       <div class="card">
         <label for="keyInput">key</label>
-        <input type="text" id="keyInput" placeholder="e.g. progress.chapter" />
+        <input type="text" id="keyInput" placeholder="e.g. settings.userID" />
       </div>
       <div class="card">
         <label for="valueInput">value</label>
-        <input type="text" id="valueInput" placeholder='e.g. {"page":3}' />
-      </div>
-      <div class="card">
-        <label for="extraInput">optional (notes / filter)</label>
-        <input type="text" id="extraInput" placeholder="optional context" />
+        <input type="text" id="valueInput" placeholder="e.g. user001" />
       </div>
     </div>
 
-    <!-- Command buttons -->
+    <!-- Commands, grouped with short descriptions -->
     <div class="card" style="margin-top:12px;">
       <label class="muted">Commands</label>
-      <div class="buttons" role="group" aria-label="Commands">
-        <button class="btn" id="btn-get">getItem(key)</button>
-        <button class="btn" id="btn-set">setItem(key, value)</button>
-        <button class="btn" id="btn-remove">removeItem(key)</button>
-        <button class="btn danger" id="btn-clear" title="Clears data for selected WebAppName">clear()</button>
-        <button class="btn" id="btn-keys">Key Values</button>
-        <button class="btn" id="btn-mig-from">migrateFromLocalStorage()</button>
-        <button class="btn" id="btn-mig-to">migrateToLocalStorage()</button>
+
+      <div class="group" style="margin-top:8px;">
+        <div class="group-title muted">Read</div>
+        <div class="buttons">
+          <button class="btn" id="btn-get" title="Retrieve a value from LocalStorage by key for the selected Pub/device">🔍 Get Value by Key</button>
+          <button class="btn" id="btn-keys" title="Display all saved keys and values for this Pub/device">📋 Show All Data</button>
+        </div>
+      </div>
+
+      <div class="group" style="margin-top:12px;">
+        <div class="group-title muted">Write</div>
+        <div class="buttons">
+          <button class="btn" id="btn-set" title="Save or update a specific key’s value in LocalStorage for this Pub/device">✏️ Save or Update Value</button>
+          <button class="btn" id="btn-remove" title="Delete a selected key from LocalStorage for this Pub/device">❌ Delete Key</button>
+          <button class="btn danger" id="btn-clear" title="Delete ALL stored LocalStorage data for this Pub/device (irreversible)">🗑️ Clear All Data</button>
+        </div>
+      </div>
+
+      <div class="group" style="margin-top:12px;">
+        <div class="group-title muted">Migrate</div>
+        <div class="buttons">
+          <button class="btn" id="btn-mig-from" title="Copy data from LocalStorage into the app’s internal database for this Pub/device">🔄 Sync Data → App Database</button>
+          <button class="btn" id="btn-mig-to" title="Restore data from the app’s internal database back into LocalStorage for this Pub/device">🔁 Restore Data → LocalStorage</button>
+        </div>
       </div>
     </div>
 
@@ -83,21 +105,16 @@
         <label for="result" class="muted">Result / Logs</label>
         <button class="btn secondary" id="btn-clear-logs" title="Clear the logs area">🧹 Clear Logs</button>
       </div>
-      <div id="result" class="result" aria-live="polite">
-        Ready. Link your app_user_id, then load pubs.
-      </div>
+      <div id="result" class="result" aria-live="polite"></div>
     </div>
 
     <footer>
-      <div>WebAppName = <span id="currentWebAppName" class="muted">—</span></div>
-      <div>UserID = <span id="currentUserId" class="muted">—</span></div>
+      <div>Connected Pub: <span id="currentWebAppName" class="muted">—</span></div>
+      <div>Linked User: <span id="currentUserId" class="muted">—</span></div>
     </footer>
   </div>
 
-  <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- App (ES modules) -->
   <script type="module" src="./js/main.js"></script>
 </body>
 </html>

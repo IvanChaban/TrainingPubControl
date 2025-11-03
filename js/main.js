@@ -1,8 +1,8 @@
 // main.js
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
-import { getEl, refreshContextBadges, resetForm, print, clearLogs } from './ui.js';
+import { getEl, refreshContextBadges, logResult, clearLogs, setBackendStatus, setCommandsEnabled } from './ui.js';
 import { ensureAnonSession, getAuthUid, linkCurrentUser } from './auth.js';
-import { loadPubs, loadUsersForSelectedPub, loadDevicesForContext } from './data.js';
+import { loadPubs, loadDevicesForContext } from './data.js'; // ← прибрав loadUsersForSelectedPub
 import { onGet, onSet, onRemove, onClear, onKeys, onMigrateFrom, onMigrateTo } from './actions.js';
 import { subscribeResults } from './realtime.js';
 
@@ -15,68 +15,69 @@ window.addEventListener('DOMContentLoaded', async () => {
   getEl('btn-keys').addEventListener('click', onKeys);
   getEl('btn-mig-from').addEventListener('click', onMigrateFrom);
   getEl('btn-mig-to').addEventListener('click', onMigrateTo);
-  getEl('btn-reset').addEventListener('click', resetForm);
   getEl('btn-clear-logs').addEventListener('click', clearLogs);
 
   // Dropdowns
   getEl('pubSelect').addEventListener('change', async () => {
-    await loadUsersForSelectedPub();                    // наповнили userSelect
-    refreshContextBadges();                             // ✅ оновили бейджі
-
+    refreshContextBadges();
     const pub  = getEl('pubSelect').value;
-    const user = getEl('userSelect').value;
+    const user = window.__APP_USER_ID__ || localStorage.getItem('app_user_id');
     if (pub && user) {
-      await loadDevicesForContext(pub, user);           // наповнили deviceSelect
+      await loadDevicesForContext(pub, user);
     }
-  });
-
-  getEl('userSelect').addEventListener('change', async () => {
-    refreshContextBadges();                             // ✅ оновили бейджі
-    const pub  = getEl('pubSelect').value;
-    const user = getEl('userSelect').value;
-    if (pub && user) {
-      await loadDevicesForContext(pub, user);           // оновили devices під нового user
-    }
+    setCommandsEnabled(!!(pub && getEl('deviceSelect').value && user));
   });
 
   // Initial UI
   refreshContextBadges();
-  print('Initializing...');
+  logResult('Initializing...');
 
   // Config guard
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    print({ ok:false, error:'Please configure SUPABASE_URL and SUPABASE_ANON_KEY.' });
+    logResult({ ok:false, error:'Please configure SUPABASE_URL and SUPABASE_ANON_KEY.' });
     return;
   }
 
   // Anonymous sign-in
+  setBackendStatus('pending');
   const session = await ensureAnonSession();
-  if (!session) return;
-
+  if (!session) { setBackendStatus('error', 'Auth failed'); return; }
   const uid = await getAuthUid();
-  getEl('authUidLbl').textContent = uid || '—';
+  setBackendStatus(uid ? 'connected' : 'error');
 
   // Link button
   getEl('btn-link').addEventListener('click', async () => {
     const appUserId = getEl('linkUserInput').value.trim();
-    if (!appUserId) return print({ ok:false, error:'Enter app_user_id first' });
+    if (!appUserId) return logResult({ ok:false, error:'Enter app_user_id first' });
 
     const res = await linkCurrentUser(appUserId);
-    print({ step:'linkUser', ...res });
+    logResult({ step:'linkUser', ...res });
 
     if (res.ok) {
-      const hasPubs = await loadPubs();                 // наповнили pubSelect (+ userSelect)
-      refreshContextBadges();                           // ✅ оновили бейджі після першого завантаження
+      window.__APP_USER_ID__ = appUserId;
+      localStorage.setItem('app_user_id', appUserId);
+      refreshContextBadges();
+
+      const hasPubs = await loadPubs(); // наповнили pubSelect
+      refreshContextBadges();
 
       if (hasPubs) {
-        const pub  = getEl('pubSelect').value;
-        const user = getEl('userSelect').value;
-        if (pub && user) {
-          await loadDevicesForContext(pub, user);       // первинний список devices
+        const pub = getEl('pubSelect').value;
+        if (pub) {
+          await loadDevicesForContext(pub, appUserId); // ← замість userSelect
         }
       }
 
-      subscribeResults();                                // слухаємо відповіді в results
+      // ввімкнути кнопки якщо є контекст
+      setCommandsEnabled(!!(getEl('pubSelect').value && getEl('deviceSelect').value && window.__APP_USER_ID__));
+
+      subscribeResults();
     }
   });
+
+  // тримай стан доступності команд у синхроні
+  setCommandsEnabled(!!(getEl('pubSelect').value && getEl('deviceSelect').value && (window.__APP_USER_ID__ || localStorage.getItem('app_user_id'))));
+  getEl('deviceSelect').addEventListener('change', () =>
+    setCommandsEnabled(!!(getEl('pubSelect').value && getEl('deviceSelect').value && (window.__APP_USER_ID__ || localStorage.getItem('app_user_id'))))
+  );
 });
